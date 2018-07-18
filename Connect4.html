@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+
+</head>
+
+<body>
+
+    <div id="root"></div>
+    <script type="text/babel">
+    function Circle(props){
+        var color = 'white';
+        if(props.cell == 1){
+            color = 'black'
+        }
+        else if(props.cell == 2){
+            color = 'red'
+        }
+        var style = {
+            backgroundColor: color,
+            border: "1px solid black",
+            borderRadius: "100%",
+            paddingTop: "98%"
+        }
+        return (
+           <div style = {style} ></div>
+        )
+    }
+
+    function Cell(props){
+    var style = {
+        height:50,
+        width:50,
+        border:"1px solid black",
+        backgroundColor:"yellow"
+    }
+
+    return (
+        <div style = {style} onClick={ ()=> {props.clickHandler(props.row,props.col)} }>
+            <Circle cell={props.cell} />
+        </div>
+    )
+}
+
+function Row(props){
+    var style = {
+        display: "flex"
+    }
+
+    var cells = [];
+    for(let i = 0; i < 7; i++){
+        cells.push(<Cell key={i} row = {props.row} col={i} cell={props.cells[i]}  clickHandler={props.clickHandler} />)
+    }
+
+    return( 
+        <div style={style}>{cells}</div>
+    )
+}
+
+function Board(props) {
+    var rows = [];
+
+    for( let i = 0; i < 6; i++ ) {
+        rows.push(<Row key={i} row = {i} cells = {props.cells[i]} clickHandler = {props.clickHandler}/>)
+    }
+
+    return (
+        <div>
+        {rows}
+        </div>
+    )
+}
+
+class Game extends React.Component {
+    constructor(props) {
+        super(props);
+        var cells = [];
+        for( var i = 0; i < 6; i++){
+            cells.push(new Array(7).fill(0));
+        }
+
+        this.state = {cells:cells, player:false, winner:0}
+
+        this.clickHandler = this.clickHandler.bind(this);
+    }
+
+    findAvailableRow(col) {
+        for( let i = 5; i >= 0; i--) {
+            if(this.state.cells[i][col] == 0) {
+                return i;
+            }
+        }
+    }
+
+    checkDiagonal(row, col) {
+        return 0;
+    }
+
+    checkHorizontal(row, col) {
+        var c = this.state.cells;
+        var i = 6;
+        var value = this.state.player ? 2 : 1
+
+        while (i >= 3) {
+            if( c[row][i] == value && c[row][i-1] == value && c[row][i-2] == value && c[row][i-3] == value) {
+                return 1;
+            }
+            i--;
+        }
+
+        return 0;
+    }
+
+    checkVertical(row, col) {
+        var c = this.state.cells;
+        var i = row;
+        var value = this.state.player ? 2 : 1;
+
+        if(i < 3 ){
+            if( c[i][col] == value && c[i+1][col] == value && c[i+2][col] == value && c[i+3][col] == value ){
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+    checkDiagonal(row,col){
+        //find right and left tops
+        var c = this.state.cells;
+        var val = this.state.player? 2:1;
+        var rR = row;
+        var cR = col;
+        while(rR < 5 && cR < 6){
+            rR++; 
+            cR++;
+        }
+
+        while( rR >= 3 && cR >= 3){
+            if(c[rR][cR] == val && c[rR-1][cR-1] == val && c[rR-2][cR-2] == val && c[rR-3][cR-3] == val){
+                return 1
+            }
+            rR--
+            cR--
+        }   
+
+        var rL = row;
+        var cL = col;
+
+        while(rL < 5 && cL > 0){
+            rL++
+            cL--
+        }
+
+        while(rL >= 3 && cL <= 3){
+            if(c[rL][cL] == val && c[rL-1][cL+1] == val && c[rL-2][cL+2] == val && c[rL-3][cL+3] == val){
+                return 1
+            }
+            rL--
+            cL++
+        }
+        return 0
+    }
+
+    checkVictory(row, col) {
+        return this.checkHorizontal(row, col) || this.checkVertical(row, col) || this.checkDiagonal(row, col)
+    }
+
+    clickHandler(row, col){        
+        if(this.state.winner){
+            return;
+        }
+        var temp = this.state.cells;
+        var availableRow = this.findAvailableRow(col);
+        temp[availableRow][col] = (this.state.player ? 1 : 2);
+        this.setState({cells: temp, player: !this.state.player}, () => {
+            if(this.checkVictory(availableRow, col) > 0){
+                this.setState({winner: this.state.player ? 2: 1})
+            console.log( (this.state.player ? 'red': 'black') + ' wins!')
+        }
+        })
+        
+        
+    }
+
+    restart(){
+        var cells = [];
+        for(let i = 0; i < 6; i++ ){
+          cells.push(new Array(7).fill(0));
+        }
+        this.setState({ player : false, cells : cells, winner:0})
+    }
+
+    render() {
+        var winner = '';
+        if(this.state.winner){
+            winner = (this.state.player ? 'red': 'black') + ' wins!'
+        }
+        return (
+
+            <div>
+            <h1> {this.state.player ? 'Blacks' : 'Reds'} Turn</h1>
+            <Board cells={this.state.cells} clickHandler = {this.clickHandler}/>
+            <button onClick = {this.restart.bind(this)}> Restart </button>
+            <br/>
+            <br/>
+            <h2 style={{color:'green'}}>{winner}</h2>
+            </div>
+        )
+    }
+}
+    
+    ReactDOM.render(
+    <Game />,
+      document.getElementById('root')
+    )
+    </script>
+</body>
+
+</html>
